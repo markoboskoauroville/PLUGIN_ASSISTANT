@@ -14,3 +14,6 @@ bridge.js (isolated world) copies `on` to `<html data-pa-on>`; inject.js (MAIN w
 
 ## Not tested on a real machine at v1
 Written without compiling on the Mac (rule); the first real run is Marko's: microphone permission prompt, AU instantiate, input and output on different devices in one AVAudioEngine (clock drift between the mic and BlackHole is not corrected), plug-ins that refuse a stereo chain.
+
+## v2 (13.11.2026)
+Exactly two meters, thin horizontal lines (RMS fill, peak-hold tick 0.8 s, green / amber above -12 / red above -3): one right beside the INPUT picker, one right beside the OUTPUT picker (after the chain). While OFF a light input-only engine (Rack.startMonitor, parked on the output device, never the speakers) taps the microphone so the input meter shows signal before ON; it starts at launch only when microphone permission is already granted, stops at ON, restarts at OFF. /status levels: in, inRms, out, outRms (peak and RMS, dBFS). The popup shows the same two lines.

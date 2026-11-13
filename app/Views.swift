@@ -26,18 +26,24 @@ struct StepButton: View {
     }
 }
 
-struct Hair: View {
-    let db: Float
+/// One thin horizontal line: RMS fill, a short peak-hold tick; green, amber above -12, red above -3.
+struct VU: View {
+    let peak: Float
+    let rms: Float
+    let hold: Float
+    static func frac(_ db: Float) -> CGFloat { CGFloat(max(0, min(1, (db + 60) / 60))) }
+    static func color(_ db: Float) -> Color { db > -3 ? .red : (db > -12 ? .orange : .green) }
     var body: some View {
         GeometryReader { g in
-            let f = CGFloat(max(0, min(1, (db + 60) / 60)))
             ZStack(alignment: .leading) {
                 Rectangle().fill(Color.gray.opacity(0.35)).frame(height: 1)
-                Rectangle().fill(db > -3 ? Color.red : (db > -12 ? Color.orange : Color.green)).frame(width: g.size.width * f, height: 2)
+                Rectangle().fill(VU.color(rms)).frame(width: g.size.width * VU.frac(rms), height: 3)
+                Rectangle().fill(VU.color(hold)).frame(width: 2, height: 7).offset(x: max(0, g.size.width * VU.frac(hold) - 2))
             }
             .frame(maxHeight: .infinity, alignment: .center)
         }
-        .frame(height: 6)
+        .frame(height: 8)
+        .accessibilityLabel("level")
     }
 }
 
@@ -109,10 +115,12 @@ struct ContentView: View {
                     Divider()
                     VStack(alignment: .leading, spacing: 6) {
                         HStack { Text("1").font(.system(size: 13, weight: .semibold)).frame(width: 24, height: 24).background(Circle().strokeBorder(Color.accentColor, lineWidth: 1)); Text("MICROPHONE").font(.system(size: 14, weight: .semibold)) }
+                        HStack(spacing: 10) {
                         Picker("", selection: Binding(get: { s.inputUID }, set: { s.setInput($0) })) {
                             ForEach(s.inputs, id: \.uid) { Text($0.name).tag($0.uid) }
-                        }.labelsHidden()
-                        HStack { Text("IN").font(.caption).foregroundStyle(.secondary); Hair(db: s.inDb) }
+                        }.labelsHidden().frame(maxWidth: 260)
+                            VU(peak: s.inPeak, rms: s.inRms, hold: s.inHold).frame(minWidth: 80)
+                        }
                     }
                     Divider()
                     VStack(alignment: .leading, spacing: 8) {
@@ -140,10 +148,12 @@ struct ContentView: View {
                     Divider()
                     VStack(alignment: .leading, spacing: 6) {
                         HStack { Text("3").font(.system(size: 13, weight: .semibold)).frame(width: 24, height: 24).background(Circle().strokeBorder(Color.accentColor, lineWidth: 1)); Text("OUTPUT (Chrome takes this as its microphone)").font(.system(size: 14, weight: .semibold)) }
+                        HStack(spacing: 10) {
                         Picker("", selection: Binding(get: { s.outputUID }, set: { s.setOutput($0) })) {
                             ForEach(s.outputs, id: \.uid) { Text($0.name).tag($0.uid) }
-                        }.labelsHidden()
-                        HStack { Text("OUT").font(.caption).foregroundStyle(.secondary); Hair(db: s.outDb) }
+                        }.labelsHidden().frame(maxWidth: 260)
+                            VU(peak: s.outPeak, rms: s.outRms, hold: s.outHold).frame(minWidth: 80)
+                        }
                     }
                     Divider()
                     VStack(alignment: .leading, spacing: 6) {

@@ -24,8 +24,14 @@ final class Store: ObservableObject {
     @Published var outputs: [AudioDev] = []
     @Published var inputUID = UserDefaults.standard.string(forKey: "inputUID") ?? ""
     @Published var outputUID = UserDefaults.standard.string(forKey: "outputUID") ?? ""
-    @Published var inDb: Float = -90
-    @Published var outDb: Float = -90
+    @Published var inPeak: Float = -90
+    @Published var inRms: Float = -90
+    @Published var inHold: Float = -90
+    @Published var outPeak: Float = -90
+    @Published var outRms: Float = -90
+    @Published var outHold: Float = -90
+    private var inHoldAt = Date.distantPast
+    private var outHoldAt = Date.distantPast
     @Published var latency: Double = 0
     @Published var port = 0
     @Published var presets: [String] = []
@@ -63,11 +69,15 @@ final class Store: ObservableObject {
             Task { @MainActor in Store.shared.tick() }
         }
         Task { await restoreLast() }
+        ensureMonitor()
     }
 
     func tick() {
-        inDb = rack.meter.inDb
-        outDb = rack.meter.outDb
+        let now = Date()
+        inPeak = rack.meter.inPeak; inRms = rack.meter.inRms
+        outPeak = rack.meter.outPeak; outRms = rack.meter.outRms
+        if inPeak >= inHold || now.timeIntervalSince(inHoldAt) > 0.8 { inHold = inPeak; inHoldAt = now }
+        if outPeak >= outHold || now.timeIntervalSince(outHoldAt) > 0.8 { outHold = outPeak; outHoldAt = now }
         if on { latency = rack.latencyMs(input: dev(inputUID), output: dev(outputUID)) }
     }
 
@@ -84,12 +94,18 @@ final class Store: ObservableObject {
         }
     }
 
+    /// OFF: a light input-only tap feeds the input meter
+    func ensureMonitor() {
+        guard !on, let i = dev(inputUID), let o = dev(outputUID), AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
+        rack.startMonitor(input: i, output: o)
+    }
+
     func dev(_ uid: String) -> AudioDev? { Dev.all().first(where: { $0.uid == uid }) }
 
     func setInput(_ uid: String) {
         inputUID = uid
         UserDefaults.standard.set(uid, forKey: "inputUID")
-        if on { _ = turnOn() }
+        if on { _ = turnOn() } else { ensureMonitor() }
     }
 
     func setOutput(_ uid: String) {
@@ -131,6 +147,7 @@ final class Store: ObservableObject {
         rack.stop()
         on = false
         latency = 0
+        ensureMonitor()
     }
 
     func syncChain() {
@@ -191,7 +208,7 @@ final class Store: ObservableObject {
             "input": dev(inputUID)?.name ?? "", "output": dev(outputUID)?.name ?? "",
             "bufferFrames": Int(frames),
             "latencyMs": (latency * 10).rounded() / 10,
-            "levels": ["in": Double(rack.meter.inDb), "out": Double(rack.meter.outDb)],
+            "levels": ["in": Double(rack.meter.inPeak), "inRms": Double(rack.meter.inRms), "out": Double(rack.meter.outPeak), "outRms": Double(rack.meter.outRms)],
             "chain": chain.map { ["id": $0.id, "plugin": $0.plugin, "name": $0.name, "manufacturer": $0.manufacturer, "bypass": $0.bypass] as [String: Any] }
         ]
     }

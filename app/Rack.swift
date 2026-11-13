@@ -80,17 +80,23 @@ enum Dev {
 }
 
 final class Meter: @unchecked Sendable {
-    var inDb: Float = -90
-    var outDb: Float = -90
-    static func peak(_ b: AVAudioPCMBuffer) -> Float {
-        guard let ch = b.floatChannelData else { return -90 }
+    var inPeak: Float = -90
+    var inRms: Float = -90
+    var outPeak: Float = -90
+    var outRms: Float = -90
+    static func levels(_ b: AVAudioPCMBuffer) -> (Float, Float) {
+        guard let ch = b.floatChannelData else { return (-90, -90) }
         var m: Float = 0
+        var sum: Float = 0
         let n = Int(b.frameLength)
-        for c in 0..<Int(b.format.channelCount) {
-            let p = ch[c]
-            for i in 0..<n { let v = abs(p[i]); if v > m { m = v } }
+        let c = Int(b.format.channelCount)
+        if n == 0 || c == 0 { return (-90, -90) }
+        for k in 0..<c {
+            let p = ch[k]
+            for i in 0..<n { let v = abs(p[i]); if v > m { m = v }; sum += v * v }
         }
-        return 20 * log10(max(m, 1e-4))
+        let rms = (sum / Float(n * c)).squareRoot()
+        return (20 * log10(max(m, 1e-4)), 20 * log10(max(rms, 1e-4)))
     }
 }
 
@@ -234,6 +240,7 @@ final class Rack {
     }
 
     func start(input: AudioDev, output: AudioDev, frames: UInt32) throws {
+        stopMonitor()
         stop()
         Dev.setBuffer(input.id, frames)
         Dev.setBuffer(output.id, frames)
@@ -247,20 +254,48 @@ final class Rack {
         running = true
     }
 
+    // light input-only tap while the rack is OFF, so the input meter shows the microphone before ON
+    private var monitor: AVAudioEngine?
+
+    func startMonitor(input: AudioDev, output: AudioDev) {
+        stopMonitor()
+        let e = AVAudioEngine()
+        do {
+            var d = input.id
+            guard let au = e.inputNode.audioUnit else { return }
+            guard AudioUnitSetProperty(au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &d, UInt32(MemoryLayout<AudioDeviceID>.size)) == noErr else { return }
+            // the engine's output side is parked on the chosen output (BlackHole) so it never touches the speakers
+            var o = output.id
+            if let ou = e.outputNode.audioUnit { _ = AudioUnitSetProperty(ou, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &o, UInt32(MemoryLayout<AudioDeviceID>.size)) }
+            let f = e.inputNode.outputFormat(forBus: 0)
+            if f.channelCount == 0 { return }
+            let m = meter
+            e.inputNode.installTap(onBus: 0, bufferSize: 1024, format: f) { b, _ in let l = Meter.levels(b); m.inPeak = l.0; m.inRms = l.1 }
+            e.prepare()
+            try e.start()
+            monitor = e
+        } catch { monitor = nil }
+    }
+
+    func stopMonitor() {
+        if let e = monitor { e.inputNode.removeTap(onBus: 0); e.stop() }
+        monitor = nil
+    }
+
     func stop() {
         head.removeTap(onBus: 0)
         tail.removeTap(onBus: 0)
         if engine.isRunning { engine.stop() }
         running = false
-        meter.inDb = -90; meter.outDb = -90
+        meter.outPeak = -90; meter.outRms = -90; if monitor == nil { meter.inPeak = -90; meter.inRms = -90 }
     }
 
     private func taps() {
         head.removeTap(onBus: 0)
         tail.removeTap(onBus: 0)
         let m = meter
-        head.installTap(onBus: 0, bufferSize: 512, format: head.outputFormat(forBus: 0)) { b, _ in m.inDb = Meter.peak(b) }
-        tail.installTap(onBus: 0, bufferSize: 512, format: tail.outputFormat(forBus: 0)) { b, _ in m.outDb = Meter.peak(b) }
+        head.installTap(onBus: 0, bufferSize: 512, format: head.outputFormat(forBus: 0)) { b, _ in let l = Meter.levels(b); m.inPeak = l.0; m.inRms = l.1 }
+        tail.installTap(onBus: 0, bufferSize: 512, format: tail.outputFormat(forBus: 0)) { b, _ in let l = Meter.levels(b); m.outPeak = l.0; m.outRms = l.1 }
     }
 
     func latencyMs(input: AudioDev?, output: AudioDev?) -> Double {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Plugin Assistant (Mantra)",
-  "version": "1",
+  "version": "2",
   "description": "Gives pages the microphone processed by the Plugin Assistant host app (BlackHole 2ch).",
   "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
   "action": { "default_popup": "popup.html", "default_icon": { "16": "icon16.png", "48": "icon48.png" } },

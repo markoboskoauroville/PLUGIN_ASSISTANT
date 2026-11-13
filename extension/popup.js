@@ -37,7 +37,8 @@ async function poll() {
     $('onoff').disabled = false; $('onoff').textContent = s.on ? 'OFF' : 'ON';
     $('status').className = s.error ? 'bad' : 'mut';
     $('status').textContent = s.error || (s.on ? `ON: ${s.input} to ${s.output}, ${s.latencyMs} ms` : 'host ready, OFF');
-    $('mi').style.width = pct(s.levels.in); $('mo').style.width = pct(s.levels.out);
+    $('mi').style.width = pct(s.levels.inRms); $('mo').style.width = pct(s.levels.outRms);
+    $('pi').style.left = pct(s.levels.in); $('po').style.left = pct(s.levels.out);
     if (first || prev !== JSON.stringify(s.chain)) drawChain();
     chrome.storage.local.set({ on: !!s.on });
   } catch (e) {

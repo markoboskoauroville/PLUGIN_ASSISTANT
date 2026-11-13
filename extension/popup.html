@@ -15,6 +15,7 @@ button:disabled{color:var(--mut);cursor:default}
 .bad{color:#d33}
 .meter{height:2px;background:var(--line);position:relative;margin:4px 14px}
 .meter i{position:absolute;left:0;top:0;bottom:0;background:#2a9d4a;width:0}
+.meter u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--fg);text-decoration:none}
 .slot{display:flex;align-items:center;gap:4px;padding:6px 14px;border-bottom:1px solid var(--line)}
 .slot .n{flex:1;min-width:0}.slot .n b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .slot.by b{text-decoration:line-through;color:var(--mut)}
@@ -24,12 +25,12 @@ button:disabled{color:var(--mut);cursor:default}
 #res div{padding:5px 6px;cursor:pointer}#res div:hover{background:var(--line)}
 footer{text-align:center;color:var(--mut);font-size:11px;padding:8px}
 </style></head><body>
-<div class="row"><h1>Plugin Assistant (Mantra)</h1><button id="onoff" disabled>ON</button><span class="mut">v1</span></div>
+<div class="row"><h1>Plugin Assistant (Mantra)</h1><button id="onoff" disabled>ON</button><span class="mut">v2</span></div>
 <div id="status" class="mut">looking for the host...</div>
-<div class="mut" style="padding:4px 14px 0">IN</div><div class="meter"><i id="mi"></i></div>
+<div class="mut" style="padding:4px 14px 0">IN</div><div class="meter"><i id="mi"></i><u id="pi"></u></div>
 <div id="chain"></div>
 <div id="add"><button id="addb">+ ADD PLUG-IN</button><div id="addbox" hidden><input id="q" placeholder="Search plug-ins"><div id="res"></div></div></div>
-<div class="mut" style="padding:0 14px">OUT</div><div class="meter"><i id="mo"></i></div>
+<div class="mut" style="padding:0 14px">OUT</div><div class="meter"><i id="mo"></i><u id="po"></u></div>
 <div class="row"><button id="site">ENABLE ON THIS SITE</button><span class="mut" id="siteinfo"></span></div>
 <footer>© 2026 Mantra Productions</footer>
 <script src="popup.js"></script></body></html>
