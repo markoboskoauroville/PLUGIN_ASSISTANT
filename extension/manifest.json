@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Plugin Assistant (Mantra)",
+  "version": "1",
+  "description": "Gives pages the microphone processed by the Plugin Assistant host app (BlackHole 2ch).",
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
+  "action": { "default_popup": "popup.html", "default_icon": { "16": "icon16.png", "48": "icon48.png" } },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "alarms", "scripting"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    { "matches": ["https://mpa-academy.pages.dev/*"], "js": ["bridge.js"], "run_at": "document_start", "all_frames": true, "world": "ISOLATED" },
+    { "matches": ["https://mpa-academy.pages.dev/*"], "js": ["inject.js"], "run_at": "document_start", "all_frames": true, "world": "MAIN" }
+  ]
+}
